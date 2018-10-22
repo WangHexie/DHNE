@@ -6,11 +6,11 @@ from functools import reduce
 import math
 import time
 
-from keras.models import Model
-from keras import regularizers, optimizers
-from keras.layers import Input, Dense, concatenate
-from keras import backend as K
-from keras.models import load_model
+from tensorflow.keras.models import Model
+from tensorflow.keras import regularizers, optimizers
+from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
 
 from dataset import read_data_sets, embedding_lookup
 
