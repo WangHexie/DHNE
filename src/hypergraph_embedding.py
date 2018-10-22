@@ -52,7 +52,11 @@ class hypergraph(object):
         self.ouput_layer = Dense(1, activation='sigmoid', name='classify_layer')(self.hidden_layer)
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
-        
+
+        self.model.compile(optimizer=optimizers.RMSprop(lr=self.options.learning_rate),
+                loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
+                              loss_weights=[self.options.alpha]*3+[1.0],
+                              metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
         self.model = tf.contrib.tpu.keras_to_tpu_model(
             self.model,
             strategy=tf.contrib.tpu.TPUDistributionStrategy(
@@ -60,12 +64,6 @@ class hypergraph(object):
                     tpu='grpc://' + os.environ['COLAB_TPU_ADDR'])
             )
         )
-
-        self.model.compile(optimizer=optimizers.RMSprop(lr=self.options.learning_rate),
-                loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
-                              loss_weights=[self.options.alpha]*3+[1.0],
-                              metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
-
         self.model.summary()
 
     def train(self, dataset):
