@@ -53,7 +53,7 @@ class hypergraph(object):
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
-        self.model.compile(optimizer=optimizers.RMSprop(lr=self.options.learning_rate),
+        self.model.compile(optimizer=tf.train.RMSPropOptimizer(lr=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
                               loss_weights=[self.options.alpha]*3+[1.0],
                               metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
@@ -82,7 +82,6 @@ class hypergraph(object):
         batch_e = embedding_lookup(embeddings, x)
         return (dict([('input_{}'.format(i), batch_e[i]) for i in range(3)]),
                 dict([('decode_{}'.format(i), batch_e[i]) for i in range(3)]+[('classify_layer', y)]))
-        return res
 
     def get_embeddings(self, dataset):
         shift = np.append([0], np.cumsum(dataset.train.nums_type))
