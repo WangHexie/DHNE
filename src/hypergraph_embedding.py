@@ -6,11 +6,11 @@ from functools import reduce
 import math
 import time
 
-from keras.models import Model
-from keras import regularizers, optimizers
-from keras.layers import Input, Dense, concatenate
-from keras import backend as K
-from keras.models import load_model
+from tensorflow.keras.models import Model
+from tensorflow.keras import regularizers, optimizers
+from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
 
 from dataset import read_data_sets, embedding_lookup
 
@@ -53,7 +53,7 @@ class hypergraph(object):
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
-        self.model.compile(optimizer=optimizers.RMSprop(lr=self.options.learning_rate),
+        self.model.compile(optimizer=tf.train.RMSPropOptimizer(learning_rate=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
                               loss_weights=[self.options.alpha]*3+[1.0],
                               metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
