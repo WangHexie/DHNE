@@ -12,12 +12,13 @@ from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 
-from dataset import read_data_sets, embedding_lookup
+from .dataset import read_data_sets, embedding_lookup, LENGTH
+
 
 parser = argparse.ArgumentParser("hyper-network embedding", fromfile_prefix_chars='@')
 parser.add_argument('--data_path', type=str, help='Directory to load data.')
 parser.add_argument('--save_path', type=str, help='Directory to save data.')
-parser.add_argument('-s', '--embedding_size', type=int, nargs=3, default=[32, 32, 32], help='The embedding dimension size')
+parser.add_argument('-s', '--embedding_size', type=int, nargs=LENGTH, default=[32 for i in range(LENGTH)], help='The embedding dimension size')
 parser.add_argument('--prefix_path', type=str, default='model', help='.')
 parser.add_argument('--hidden_size', type=int, default=64, help='The hidden full connected layer size')
 parser.add_argument('-e', '--epochs_to_train', type=int, default=10, help='Number of epoch to train. Each epoch processes the training data once completely')
@@ -27,6 +28,7 @@ parser.add_argument('-a', '--alpha', type=float, default=1, help='radio of autoe
 parser.add_argument('-neg', '--num_neg_samples', type=int, default=5, help='Neggative samples per training example')
 parser.add_argument('-o', '--options', type=str, help='options files to read, if empty, stdin is used')
 parser.add_argument('--seed', type=int, help='random seed')
+
 
 
 class hypergraph(object):
@@ -40,12 +42,12 @@ class hypergraph(object):
 
     def build_model(self):
         ### TO DO: tensorflow supports sparse_placeholder and sparse_matmul from version 1.4
-        self.inputs = [Input(shape=(self.options.dim_feature[i], ), name='input_{}'.format(i), dtype='float') for i in range(3)]
+        self.inputs = [Input(shape=(self.options.dim_feature[i], ), name='input_{}'.format(i), dtype='float') for i in range(LENGTH)]
 
         ### auto-encoder
-        self.encodeds = [Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i in range(3)]
+        self.encodeds = [Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i in range(LENGTH)]
         self.decodeds = [Dense(self.options.dim_feature[i], activation='sigmoid', name='decode_{}'.format(i),
-                        activity_regularizer = regularizers.l2(0.0))(self.encodeds[i]) for i in range(3)]
+                        activity_regularizer = regularizers.l2(0.0))(self.encodeds[i]) for i in range(LENGTH)]
 
         self.merged = concatenate(self.encodeds, axis=1)
         self.hidden_layer = Dense(self.options.hidden_size, activation='tanh', name='full_connected_layer')(self.merged)
@@ -54,9 +56,9 @@ class hypergraph(object):
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
         self.model.compile(optimizer=optimizers.RMSprop(lr=self.options.learning_rate),
-                loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
-                              loss_weights=[self.options.alpha]*3+[1.0],
-                              metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
+                loss=[self.sparse_autoencoder_error]*LENGTH+['binary_crossentropy'],
+                              loss_weights=[self.options.alpha]*LENGTH+[1.0],
+                              metrics=dict([('decode_{}'.format(i), 'mse') for i in range(LENGTH)]+[('classify_layer', 'accuracy')]))
         self.model = tf.contrib.tpu.keras_to_tpu_model(
             self.model,
             strategy=tf.contrib.tpu.TPUDistributionStrategy(
@@ -76,18 +78,18 @@ class hypergraph(object):
 
     def predict(self, embeddings, data):
         test = embedding_lookup(embeddings, data)
-        return self.model.predict(test, batch_size=self.options.batch_size)[3]
+        return self.model.predict(test, batch_size=self.options.batch_size)[LENGTH]  # ATTENTION
 
     def fill_feed_dict(self, embeddings, nums_type, x, y):
         batch_e = embedding_lookup(embeddings, x)
-        return (dict([('input_{}'.format(i), batch_e[i]) for i in range(3)]),
-                dict([('decode_{}'.format(i), batch_e[i]) for i in range(3)]+[('classify_layer', y)]))
+        return (dict([('input_{}'.format(i), batch_e[i]) for i in range(LENGTH)]),
+                dict([('decode_{}'.format(i), batch_e[i]) for i in range(LENGTH)]+[('classify_layer', y)]))
         return res
 
     def get_embeddings(self, dataset):
         shift = np.append([0], np.cumsum(dataset.train.nums_type))
         embeddings = []
-        for i in range(3):
+        for i in range(LENGTH):
             index = range(dataset.train.nums_type[i])
             batch_num = math.ceil(1.0*len(index)/self.options.batch_size)
             ls = np.array_split(index, batch_num)

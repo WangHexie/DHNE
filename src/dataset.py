@@ -9,7 +9,7 @@ from scipy.sparse import vstack as s_vstack
 import sys
 import itertools
 
-
+LENGTH = 4
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
                                                 'labels', 'idx_label', 'label_name'])
 
