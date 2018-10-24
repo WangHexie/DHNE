@@ -53,7 +53,7 @@ class hypergraph(object):
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
-        self.model.compile(optimizer=tf.train.RMSPropOptimizer(lr=self.options.learning_rate),
+        self.model.compile(optimizer=tf.train.RMSPropOptimizer(learning_rate=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
                               loss_weights=[self.options.alpha]*3+[1.0],
                               metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
