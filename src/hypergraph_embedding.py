@@ -11,6 +11,7 @@ from tensorflow.keras import regularizers, optimizers
 from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import multi_gpu_model
 
 from dataset import read_data_sets, embedding_lookup
 
@@ -52,6 +53,8 @@ class hypergraph(object):
         self.ouput_layer = Dense(1, activation='sigmoid', name='classify_layer')(self.hidden_layer)
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
+
+        self.model = multi_gpu_model(self.model)
 
         self.model.compile(optimizer=tf.train.RMSPropOptimizer(learning_rate=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
