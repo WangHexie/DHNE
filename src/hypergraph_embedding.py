@@ -54,7 +54,7 @@ class hypergraph(object):
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
-        self.model = multi_gpu_model(self.model, gpus=2)
+        # self.model = multi_gpu_model(self.model, gpus=2)
 
         self.model.compile(optimizer=tf.train.RMSPropOptimizer(learning_rate=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
