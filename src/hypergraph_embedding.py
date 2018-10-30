@@ -48,14 +48,14 @@ class hypergraph(object):
 
         ### auto-encoder
         self.encodeds = [
-            Dense(self.options.embedding_size[i], activation='relu', name='encode_{}'.format(i))(self.inputs[i]) for i
+            Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i
             in range(3)]
-        self.decodeds = [Dense(self.options.dim_feature[i], activation='relu', name='decode_{}'.format(i),
+        self.decodeds = [Dense(self.options.dim_feature[i], activation='sigmoid', name='decode_{}'.format(i),
                                activity_regularizer=regularizers.l2(0.0))(self.encodeds[i]) for i in range(3)]
 
         self.merged = concatenate(self.encodeds, axis=1)
-        self.hidden_layer = Dense(self.options.hidden_size, activation='relu', name='full_connected_layer')(self.merged)
-        self.ouput_layer = Dense(1, activation='relu', name='classify_layer')(self.hidden_layer)
+        self.hidden_layer = Dense(self.options.hidden_size, activation='tanh', name='full_connected_layer')(self.merged)
+        self.ouput_layer = Dense(1, activation='sigmoid', name='classify_layer')(self.hidden_layer)
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds + [self.ouput_layer])
 
