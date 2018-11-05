@@ -12,7 +12,7 @@ from tensorflow.keras.layers import Input, Dense, concatenate
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 
-from .dataset import read_data_sets, embedding_lookup, LENGTH
+from dataset import read_data_sets, embedding_lookup, LENGTH
 
 
 parser = argparse.ArgumentParser("hyper-network embedding", fromfile_prefix_chars='@')
@@ -59,13 +59,13 @@ class hypergraph(object):
                 loss=[self.sparse_autoencoder_error]*LENGTH+['binary_crossentropy'],
                               loss_weights=[self.options.alpha]*LENGTH+[1.0],
                               metrics=dict([('decode_{}'.format(i), 'mse') for i in range(LENGTH)]+[('classify_layer', 'accuracy')]))
-        self.model = tf.contrib.tpu.keras_to_tpu_model(
-            self.model,
-            strategy=tf.contrib.tpu.TPUDistributionStrategy(
-                tf.contrib.cluster_resolver.TPUClusterResolver(
-                    tpu='grpc://' + os.environ['COLAB_TPU_ADDR'])
-            )
-        )
+        # self.model = tf.contrib.tpu.keras_to_tpu_model(
+        #     self.model,
+        #     strategy=tf.contrib.tpu.TPUDistributionStrategy(
+        #         tf.contrib.cluster_resolver.TPUClusterResolver(
+        #             tpu='grpc://' + os.environ['COLAB_TPU_ADDR'])
+        #     )
+        # )
         self.model.summary()
 
     def train(self, dataset):

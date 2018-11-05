@@ -11,13 +11,14 @@ import itertools
 
 LENGTH = 4
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
-                                                'labels', 'idx_label', 'label_name'])
+                                               'labels', 'idx_label', 'label_name'])
+
 
 class DataSet(object):
 
     def __init__(self, edge, nums_type, **kwargs):
         self.edge = edge
-        self.edge_set = set(map(tuple, edge)) ### ugly code, need to be fixed
+        self.edge_set = set(map(tuple, edge))  # ugly code, need to be fixed
         self.nums_type = nums_type
         self.kwargs = kwargs
         self.nums_examples = len(edge)
@@ -41,17 +42,19 @@ class DataSet(object):
             end = self.index_in_epoch
             neg_data = []
             for i in range(start, end):
-                ### warning !!! we need deepcopy to copy list
+                # warning !!! we need deepcopy to copy list
                 index = copy.deepcopy(self.edge[i])
                 n_neg = 0
-                while(n_neg < num_neg_samples):
+                while n_neg < num_neg_samples:
+                    # this maybe have to be modified, but it still will work
                     mode = np.random.rand()
                     if mode < pair_radio:
-                        type_ = np.random.randint(3)
+                        type_ = np.random.randint(LENGTH)
                         node = np.random.randint(self.nums_type[type_])
                         index[type_] = node
                     else:
-                        types_ = np.random.choice(3, 2, replace=False)
+                        # change_length = 1 + round(LENGTH*(mode**(LENGTH-1)))
+                        types_ = np.random.choice(LENGTH, 2, replace=False)
                         node_1 = np.random.randint(self.nums_type[types_[0]])
                         node_2 = np.random.randint(self.nums_type[types_[1]])
                         index[types_[0]] = node_1
@@ -64,7 +67,7 @@ class DataSet(object):
                 batch_data = np.vstack((self.edge[start:end], neg_data))
                 nums_batch = len(batch_data)
                 labels = np.zeros(nums_batch)
-                labels[0:end-start] = 1
+                labels[0:end - start] = 1
                 perm = np.random.permutation(nums_batch)
                 batch_data = batch_data[perm]
                 labels = labels[perm]
@@ -73,14 +76,16 @@ class DataSet(object):
                 nums_batch = len(batch_data)
                 labels = np.ones(len(batch_data))
             batch_e = embedding_lookup(embeddings, batch_data, sparse_input)
-            yield (dict([('input_{}'.format(i), batch_e[i]) for i in range(3)]),
-                    dict([('decode_{}'.format(i), batch_e[i]) for i in range(3)]+[('classify_layer', labels)]))
+            yield (dict([('input_{}'.format(i), batch_e[i]) for i in range(LENGTH)]),
+                   dict([('decode_{}'.format(i), batch_e[i]) for i in range(LENGTH)] + [('classify_layer', labels)]))
+
 
 def embedding_lookup(embeddings, index, sparse_input=True):
     if sparse_input:
-        return [embeddings[i][index[:, i], :].todense()  for i in range(3)]
+        return [embeddings[i][index[:, i], :].todense() for i in range(LENGTH)]
     else:
-        return [embeddings[i][index[:, i], :]  for i in range(3)]
+        return [embeddings[i][index[:, i], :] for i in range(LENGTH)]
+
 
 def read_data_sets(train_dir):
     TRAIN_FILE = 'train_data.npz'
@@ -98,22 +103,26 @@ def read_data_sets(train_dir):
     del data
     embeddings = generate_embeddings(train_data.edge, train_data.nums_type)
     return Datasets(train=train_data, test=test_data, embeddings=embeddings, node_cluster=node_cluster,
-                labels=labels, idx_label=idx_label, label_name=label_set)
+                    labels=labels, idx_label=idx_label, label_name=label_set)
+
 
 def generate_H(edge, nums_type):
     nums_examples = len(edge)
-    H = [csr_matrix((np.ones(nums_examples), (edge[:, i], range(nums_examples))), shape=(nums_type[i], nums_examples)) for i in range(3)]
+    H = [csr_matrix((np.ones(nums_examples), (edge[:, i], range(nums_examples))), shape=(nums_type[i], nums_examples))
+         for i in range(LENGTH)]
     return H
 
+
 def dense_to_onehot(labels):
-    return np.array(map(lambda x: [x*0.5+0.5, x*-0.5+0.5], list(labels)), dtype=float)
+    return np.array(map(lambda x: [x * 0.5 + 0.5, x * -0.5 + 0.5], list(labels)), dtype=float)
+
 
 def generate_embeddings(edge, nums_type, H=None):
     if H is None:
         H = generate_H(edge, nums_type)
-    embeddings = [H[i].dot(s_vstack([H[j] for j in range(3) if j != i]).T).astype('float') for i in range(3)]
-    ### 0-1 scaling
-    for i in range(3):
+    embeddings = [H[i].dot(s_vstack([H[j] for j in range(LENGTH) if j != i]).T).astype('float') for i in range(LENGTH)]
+    # 0-1 scaling
+    for i in range(LENGTH):
         col_max = np.array(embeddings[i].max(0).todense()).flatten()
         _, col_index = embeddings[i].nonzero()
         embeddings[i].data /= col_max[col_index]
