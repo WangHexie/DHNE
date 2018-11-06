@@ -12,9 +12,11 @@ import itertools
 LENGTH = 4
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
                                                'labels', 'idx_label', 'label_name'])
+time_used = 0
 
 
 class DataSet(object):
+    time_used = 0
 
     def __init__(self, edge, nums_type, **kwargs):
         self.edge = edge
@@ -31,6 +33,8 @@ class DataSet(object):
             if num_neg_samples = 0, there is no negative sampling.
         """
         while 1:
+            import time
+            start_time = time.time()
             start = self.index_in_epoch
             self.index_in_epoch += batch_size
             if self.index_in_epoch > self.nums_examples:
@@ -76,8 +80,12 @@ class DataSet(object):
                 nums_batch = len(batch_data)
                 labels = np.ones(len(batch_data))
             batch_e = embedding_lookup(embeddings, batch_data, sparse_input)
-            yield (dict([('input_{}'.format(i), batch_e[i]) for i in range(LENGTH)]),
-                   dict([('decode_{}'.format(i), batch_e[i]) for i in range(LENGTH)] + [('classify_layer', labels)]))
+            x = (dict([('input_{}'.format(i), batch_e[i]) for i in range(LENGTH)]),
+                 dict([('decode_{}'.format(i), batch_e[i]) for i in range(LENGTH)] + [('classify_layer', labels)]))
+
+            finish_time = time.time()
+            DataSet.time_used = DataSet.time_used + finish_time - start_time
+            yield x
 
 
 def embedding_lookup(embeddings, index, sparse_input=True):
