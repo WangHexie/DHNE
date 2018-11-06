@@ -22,7 +22,7 @@ parser.add_argument('--prefix_path', type=str, default='model', help='.')
 parser.add_argument('--hidden_size', type=int, default=64, help='The hidden full connected layer size')
 parser.add_argument('-e', '--epochs_to_train', type=int, default=10, help='Number of epoch to train. Each epoch processes the training data once completely')
 parser.add_argument('-b', '--batch_size', type=int, default=16, help='Number of training examples processed per step')
-parser.add_argument('-lr', '--learning_rate', type=float, default=0.01, help='initial learning rate')
+parser.add_argument('-lr', '--learning_rate', type=float, default=0.001, help='initial learning rate')
 parser.add_argument('-a', '--alpha', type=float, default=1, help='radio of autoencoder loss')
 parser.add_argument('-neg', '--num_neg_samples', type=int, default=5, help='Neggative samples per training example')
 parser.add_argument('-o', '--options', type=str, help='options files to read, if empty, stdin is used')
@@ -53,7 +53,7 @@ class hypergraph(object):
 
         self.model = Model(inputs=self.inputs, outputs=self.decodeds+[self.ouput_layer])
 
-        self.model.compile(optimizer=tf.train.RMSPropOptimizer(learning_rate=self.options.learning_rate),
+        self.model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=self.options.learning_rate),
                 loss=[self.sparse_autoencoder_error]*3+['binary_crossentropy'],
                               loss_weights=[self.options.alpha]*3+[1.0],
                               metrics=dict([('decode_{}'.format(i), 'mse') for i in range(3)]+[('classify_layer', 'accuracy')]))
