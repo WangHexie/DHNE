@@ -1,19 +1,17 @@
-import numpy as np
-import os, sys
-import tensorflow as tf
 import argparse
-from functools import reduce
 import math
+import os
 import time
+from functools import reduce
 
-from tensorflow.keras.models import Model
-from tensorflow.keras import regularizers, optimizers
-from tensorflow.keras.layers import Input, Dense, concatenate
-from tensorflow.keras import backend as K
-from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import multi_gpu_model
-
+import numpy as np
+import tensorflow as tf
 from dataset import read_data_sets, embedding_lookup, time_used, DataSet
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Input, Dense, concatenate
+from tensorflow.keras.models import Model
+from tensorflow.keras.models import load_model
 
 parser = argparse.ArgumentParser("hyper-network embedding", fromfile_prefix_chars='@')
 parser.add_argument('--data_path', type=str, help='Directory to load data.')
@@ -31,6 +29,8 @@ parser.add_argument('-neg', '--num_neg_samples', type=int, default=5, help='Negg
 parser.add_argument('-o', '--options', type=str, help='options files to read, if empty, stdin is used')
 parser.add_argument('--seed', type=int, help='random seed')
 parser.add_argument('-d', '--divide', type=int, default=1, help='divide by x')
+parser.add_argument('-l', '--load_model', type=int, default=0, help='load model weight')
+
 
 
 class hypergraph(object):
@@ -42,11 +42,13 @@ class hypergraph(object):
         return K.mean(K.square(K.sign(y_true) * (y_true - y_pred)), axis=-1)
 
     def build_model(self):
-        ### TO DO: tensorflow supports sparse_placeholder and sparse_matmul from version 1.4
-        self.inputs = [Input(shape=(self.options.dim_feature[i],), name='input_{}'.format(i), dtype='float') for i in
-                       range(3)]
+        # TODO: tensorflow supports sparse_placeholder and sparse_matmul from version 1.4
+        self.inputs = [
+            Input(shape=(self.options.dim_feature[i], ), name='input_{}'.format(i), dtype='float') for i
+            in
+            range(3)]
 
-        ### auto-encoder
+        # auto-encoder
         self.encodeds = [
             Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i
             in range(3)]
@@ -65,8 +67,10 @@ class hypergraph(object):
                            loss=[self.sparse_autoencoder_error] * 3 + ['binary_crossentropy'],
                            loss_weights=[self.options.alpha] * 3 + [1.0],
                            metrics=dict(
-                               [('decode_{}'.format(i), 'mse') for i in range(3)] + [('classify_layer', 'accuracy')]))
-
+                               [('classify_layer', 'accuracy')]))
+        if args.load_model == 1:
+            self.model.load_weights('model.h5')
+            print("loaded model")
         self.model.summary()
 
     def train(self, dataset):
@@ -168,7 +172,7 @@ if __name__ == '__main__':
     end = time.time()
     print("time, ", end - begin)
     print(time_used)
-    print("precent:",DataSet.time_used / (end - begin))
+    print("precent:", DataSet.time_used / (end - begin))
     h.save()
     h.save_embeddings(dataset)
     K.clear_session()

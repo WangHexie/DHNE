@@ -1,13 +1,10 @@
-import numpy as np
-import os
-import copy
 import collections
-import scipy.io as sio
-import operator
+import copy
+import os
+
+import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse import vstack as s_vstack
-import sys
-import itertools
 
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
                                                'labels', 'idx_label', 'label_name'])
@@ -36,6 +33,7 @@ def time_cost(func):
 
 class DataSet(object):
     time_used = 0
+
     def __init__(self, edge, nums_type, **kwargs):
         self.edge = edge
         self.edge_set = set(map(tuple, edge))  ### ugly code, need to be fixed
@@ -45,7 +43,6 @@ class DataSet(object):
         self.epochs_completed = 0
         self.index_in_epoch = 0
 
-    @time_cost
     def next_batch(self, embeddings, batch_size=16, num_neg_samples=1, pair_radio=0.9, sparse_input=True):
         """
             Return the next `batch_size` examples from this data set.
@@ -64,6 +61,19 @@ class DataSet(object):
                 assert self.index_in_epoch <= self.nums_examples
             end = self.index_in_epoch
             neg_data = []
+
+            # index = copy.deepcopy(self.edge[range(start, end)])
+            # full_neg = np.repeat(index, num_neg_samples, axis=0)
+            #
+            # def random_set(matrix: np.array) -> np.array:
+            #     column_index = np.random.randint(3, size=len(matrix))
+            #     set_value = np.fromiter((np.random.randint(i) for i in self.nums_type[column_index]), int)
+            #     matrix[range(len(matrix)), column_index] = set_value
+            #     return matrix
+            #
+            # full_neg = random_set(full_neg)
+            # neg_data = full_neg
+
             for i in range(start, end):
                 ### warning !!! we need deepcopy to copy list
                 index = copy.deepcopy(self.edge[i])
@@ -150,3 +160,19 @@ def generate_embeddings(edge, nums_type, H=None):
         _, col_index = embeddings[i].nonzero()
         embeddings[i].data /= col_max[col_index]
     return embeddings
+
+
+if __name__ == '__main__':
+    data = np.load(os.path.join("../", "data", "usb_s", 'train_data.npz'))
+    train_data = DataSet(data['train_data'], data['nums_type'])
+    ebed = generate_embeddings(train_data.edge, train_data.nums_type)
+    print("start")
+    import time
+
+    start = time.time()
+    t = 0
+    for i in train_data.next_batch(ebed, num_neg_samples=5):
+        t += 1
+        if t == 100:
+            break
+    print(time.time() - start)
