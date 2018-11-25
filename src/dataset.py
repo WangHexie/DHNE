@@ -36,6 +36,7 @@ class DataSet(object):
 
     def __init__(self, edge, nums_type, **kwargs):
         self.edge = edge
+        np.random.shuffle(self.edge)
         self.edge_set = set(map(tuple, edge))  ### ugly code, need to be fixed
         self.nums_type = nums_type
         self.kwargs = kwargs
