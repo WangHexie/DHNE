@@ -5,6 +5,7 @@ import os
 import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse import vstack as s_vstack
+from tensorflow.sparse import SparseTensor, reorder
 
 Datasets = collections.namedtuple('Datasets', ['train', 'test', 'embeddings', 'node_cluster',
                                                'labels', 'idx_label', 'label_name'])
@@ -44,7 +45,7 @@ class DataSet(object):
         self.epochs_completed = 0
         self.index_in_epoch = 0
 
-    def next_batch(self, embeddings, batch_size=16, num_neg_samples=1, pair_radio=0.9, sparse_input=True):
+    def next_batch(self, embeddings, batch_size=16, num_neg_samples=1, pair_radio=0.9, sparse_input=False):
         """
             Return the next `batch_size` examples from this data set.
             if num_neg_samples = 0, there is no negative sampling.
@@ -110,15 +111,22 @@ class DataSet(object):
             batch_e = embedding_lookup(embeddings, batch_data, sparse_input)
             finish_time = time.time()
             DataSet.time_used = DataSet.time_used + finish_time - start_time
-            yield (dict([('input_{}'.format(i), batch_e[i]) for i in range(3)]),
-                   dict([('decode_{}'.format(i), batch_e[i]) for i in range(3)] + [('classify_layer', labels)]))
+            yield [batch_e[i] for i in range(3)], [batch_e[i] for i in range(3)] + [labels]
 
 
-def embedding_lookup(embeddings, index, sparse_input=True):
+def convert_sparse_matrix_to_sparse_tensor(X):
+    coo = X.tocoo()
+    indices = np.mat([coo.row, coo.col]).transpose()
+    return SparseTensor(indices, coo.data, coo.shape)
+
+
+def embedding_lookup(embeddings, index, sparse_input=False):
     if sparse_input:
         return [embeddings[i][index[:, i], :].todense() for i in range(3)]
     else:
-        return [embeddings[i][index[:, i], :] for i in range(3)]
+        lookups = [embeddings[i][index[:, i], :] for i in range(3)]
+        sparse_tensor = [reorder(convert_sparse_matrix_to_sparse_tensor(lookup)) for lookup in lookups]
+        return sparse_tensor
 
 
 def read_data_sets(train_dir):

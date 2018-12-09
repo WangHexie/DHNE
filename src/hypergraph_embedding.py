@@ -6,12 +6,14 @@ from functools import reduce
 
 import numpy as np
 import tensorflow as tf
+from SparseLayer import SparseEmbedding
 from dataset import read_data_sets, embedding_lookup, time_used, DataSet
-from tensorflow.keras import backend as K
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Input, Dense, concatenate
-from tensorflow.keras.models import Model
-from tensorflow.keras.models import load_model
+from keras import backend as K
+from keras import regularizers
+from keras.layers import Dense, concatenate
+from keras.layers import Input
+from keras.models import Model
+from keras.models import load_model
 
 parser = argparse.ArgumentParser("hyper-network embedding", fromfile_prefix_chars='@')
 parser.add_argument('--data_path', type=str, help='Directory to load data.')
@@ -32,7 +34,6 @@ parser.add_argument('-d', '--divide', type=int, default=1, help='divide by x')
 parser.add_argument('-l', '--load_model', type=int, default=0, help='load model weight')
 
 
-
 class hypergraph(object):
     def __init__(self, options):
         self.options = options
@@ -44,14 +45,17 @@ class hypergraph(object):
     def build_model(self):
         # TODO: tensorflow supports sparse_placeholder and sparse_matmul from version 1.4
         self.inputs = [
-            Input(shape=(self.options.dim_feature[i], ), name='input_{}'.format(i), dtype='float') for i
+            Input(shape=(self.options.dim_feature[i],), name='input_{}'.format(i), dtype='float', sparse=True) for i
             in
             range(3)]
 
         # auto-encoder
         self.encodeds = [
-            Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i
+            SparseEmbedding(self.options.embedding_size[i])(self.inputs[i]) for i
             in range(3)]
+        # self.encodeds = [
+        #     Dense(self.options.embedding_size[i], activation='tanh', name='encode_{}'.format(i))(self.inputs[i]) for i
+        #     in range(3)]
         self.decodeds = [Dense(self.options.dim_feature[i], activation='sigmoid', name='decode_{}'.format(i),
                                activity_regularizer=regularizers.l2(0.0))(self.encodeds[i]) for i in range(3)]
 
